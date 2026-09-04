@@ -87,6 +87,36 @@ def encode_i(imm, rs1, funct3, rd, opcode):
     return word
 
 
+def encode_s(imm, rs2, rs1, funct3, opcode):
+    imm_12 = imm & 0xFFF
+    imm_4_0 = imm_12 & 0x1F
+    imm_11_5 = (imm_12 >> 5) & 0x7F
+    
+    word = (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode
+    return word
+
+
+def encode_b(imm, rs2, rs1, funct3, opcode):
+    imm_13 = imm & 0x1FFF
+    
+    imm_12   = (imm_13 >> 12) & 0x1
+    imm_11   = (imm_13 >> 11) & 0x1
+    imm_10_5 = (imm_13 >> 5)  & 0x3F
+    imm_4_1  = (imm_13 >> 1)  & 0xF
+
+    word = (
+        (imm_12   << 31) |
+        (imm_10_5 << 25) |
+        (rs2      << 20) |
+        (rs1      << 15) |
+        (funct3   << 12) |
+        (imm_4_1  << 8)  |
+        (imm_11   << 7)  |
+        opcode
+    )
+    return word
+
+
 def encode_instruction(instruction: str) -> int:
     """
     Funcion principal que recibe la instruccion en lenguaje ensamblador
@@ -130,9 +160,25 @@ def encode_instruction(instruction: str) -> int:
         funct3 = 0x2 if mnemonic == "lw" else 0x0
         return encode_i(imm, rs1, funct3, rd, 0x03)
 
+    # sw y sb son instrucciones de tipo S de almacenamiento en memoria
+    # Siguen el formato: nemonico rs2, imm(rs1)
+    elif mnemonic in ["sw", "sb"]:
+        rs2 = parse_register(tokens[1])
+        imm = parse_immediate(tokens[2])
+        rs1 = parse_register(tokens[3])
+        funct3 = 0x2 if mnemonic == "sw" else 0x0
+        return encode_s(imm, rs2, rs1, funct3, 0x23)
+    
+    # beq y bne son instrucciones de tipo B de salto condicional
+    # Siguen el formato: nemonico rs1, rs2, imm
+    elif mnemonic in ["beq", "bne"]:
+        rs1 = parse_register(tokens[1])
+        rs2 = parse_register(tokens[2])
+        imm = parse_immediate(tokens[3])
+        funct3 = 0x0 if mnemonic == "beq" else 0x1
+        return encode_b(imm, rs2, rs1, funct3, 0x63)
+
     # error si el nemonico no pertenece a las 12 instrucciones soportadas
-    elif mnemonic in ["sw", "sb", "beq", "bne"]:
-        raise NotImplementedError(f"Formato pendiente de implementar: {mnemonic}")
     else:
         raise ValueError(f"Instrucción no soportada: {mnemonic}")
 
