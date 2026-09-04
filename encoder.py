@@ -18,6 +18,15 @@ SOPORTADAS = ["add", "sub", "and", "or", "addi", "andi",  # instrucciones soport
               "lw", "lb", "sw", "sb", "beq", "bne"]
 
 
+R_INSTRUCTIONS = {
+    # mnemonico: (funct3, funct7)
+    "add": (0x0, 0x00),
+    "sub": (0x0, 0x20),
+    "and": (0x7, 0x00),
+    "or":  (0x6, 0x00),
+}
+
+
 def parse_register(reg: str) -> int:
     """
     Recibe un registro como string, ejemplo: "x5"
@@ -49,26 +58,83 @@ def parse_immediate(imm: str) -> int:
         raise ValueError(f"Inmediato inválido: {imm}")
 
 
+"""
+Codificadores de instrucciones RISC-V
+
+Cada funcion encode usa la misma logica; para acomodar los datos en 32 bits se utiliza:
+<< que es un operador de desplazamiento izq y | que es un operador OR a nivel de bits.
+
+En python los enteros tienen infinitos ceros a la izq.
+por lo que al tomar un valor como por ejemplo rs2 y desplazarlo 20 bits a la izq, 
+se obtiene un valor  rs2 << 20 : ...0000000 [00110] 00000 000 00000 0000000
+con infinitos ceros a la izquierda y 20 ceros a la derecha.
+Al hacer OR con los distintos valores desplazados, los 1 de cada uno de los valores, funct7,rs2,rs1, funct3, rd y opcode
+se acomodan en la posicion correcta de los 32 bits de la instruccion final.
+
+Con respecto a los inmediatos, se hace un AND con 0xFFF para asegurarse de que solo se tomen los 12 bits menos significativos.
+asegurando que a partir del bit 12 hacia la izquierda sean cero.
+"""
+
+
+def encode_r(funct7, rs2, rs1, funct3, rd, opcode):
+    word = (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+    return word
+
+
+def encode_i(imm, rs1, funct3, rd, opcode):
+    imm_12 = imm & 0xFFF  # Garantiza exactamente 12 bits (positivo o negativo)
+    word = (imm_12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+    return word
+
+
 def encode_instruction(instruction: str) -> int:
     """
-    Funcion principal que recibe la instruccion en lenguaje ensamblador.
-    Primero tokeniza la instruccion eliminando comas, parentesis y espacios y luego usa split
-    para hacer una lista con los tokens.
+    Funcion principal que recibe la instruccion en lenguaje ensamblador
+    Primero tokeniza la instruccion eliminando comas,parentesis y espacios y luego usa split para hacer una lista con los tokens.
     Luego define el nemonico como el primer elemento de esa lista y lo pasa a minuscula para estandarizar.
     Por ultimo verifica que es el nemonico y llama a la funcion correspondiente para codificar la instruccion.
     """
-    # 1. Limpieza y tokenizacion
+    # 1.Limpieza y tokenizacion
     tokens = instruction.replace(",", " ").replace("(", " ").replace(")", " ").split()
     if not tokens:
         raise ValueError("Instrucción vacía")
 
     mnemonic = tokens[0].lower()
 
-    if mnemonic not in SOPORTADAS:
-        raise ValueError(f"Instrucción no soportada: {mnemonic}")
+    # 2.Verificación del nemonico
 
-    # TODO: Despachar a los codificadores de bits en el siguiente commit
-    raise NotImplementedError(f"Codificador de bits pendiente para: {mnemonic}")
+    # add, sub, and, or son instrucciones de tipo R
+    # Eso implica que siempre siguen el mismo formato: nemonico rd, rs1, rs2
+    if mnemonic in ["add", "sub", "and", "or"]:
+        rd = parse_register(tokens[1])
+        rs1 = parse_register(tokens[2])
+        rs2 = parse_register(tokens[3])
+        funct3, funct7 = R_INSTRUCTIONS[mnemonic]
+        return encode_r(funct7, rs2, rs1, funct3, rd, 0x33)
+
+    # addi y andi son instrucciones de tipo I
+    # Siguen el formato: nemonico rd, rs1, imm
+    elif mnemonic in ["addi", "andi"]:
+        rd = parse_register(tokens[1])
+        rs1 = parse_register(tokens[2])
+        imm = parse_immediate(tokens[3])
+        funct3 = 0x0 if mnemonic == "addi" else 0x7
+        return encode_i(imm, rs1, funct3, rd, 0x13)
+
+    # lw y lb son instrucciones de tipo I de carga desde memoria
+    # Siguen el formato: nemonico rd, imm(rs1)
+    elif mnemonic in ["lw", "lb"]:
+        rd = parse_register(tokens[1])
+        imm = parse_immediate(tokens[2])
+        rs1 = parse_register(tokens[3])
+        funct3 = 0x2 if mnemonic == "lw" else 0x0
+        return encode_i(imm, rs1, funct3, rd, 0x03)
+
+    # error si el nemonico no pertenece a las 12 instrucciones soportadas
+    elif mnemonic in ["sw", "sb", "beq", "bne"]:
+        raise NotImplementedError(f"Formato pendiente de implementar: {mnemonic}")
+    else:
+        raise ValueError(f"Instrucción no soportada: {mnemonic}")
 
 
 def explain_instruction(instruction: str, word: int) -> str:
@@ -86,6 +152,9 @@ def main():
     word = encode_instruction(instruction) & 0xFFFFFFFF
 
     print(explain_instruction(instruction, word))
+
+    # No modificar el formato de la siguiente línea: la especificación la
+    # requiere, literal, para permitir la validación automática.
     print(f"HEX: 0x{word:08x}")
 
 
