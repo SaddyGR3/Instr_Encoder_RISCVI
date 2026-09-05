@@ -1,3 +1,15 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Compilados / Binarios de RISC-V
+*.o
+*.out
 pruebas_36.o
+
+# Entornos virtuales / IDEs
+.vscode/
+.idea/
+*.swp
+
