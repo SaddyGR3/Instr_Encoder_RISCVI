@@ -21,40 +21,6 @@ El flujo de procesamiento e interacción de componentes en [`encoder.py`](encode
 
 ![Diagrama de Arquitectura y Flujo de Datos](img/Encoder_diagram.png)
 
-```mermaid
-flowchart TD
-    A[Instrucción en texto: p.ej. 'add x7, x20, x6'] --> B[Tokenizador: split / strip]
-    B --> C{Identificador de Mnemónico}
-    
-    C -->|add, sub, and, or| D1[R-Type Dispatcher]
-    C -->|addi, andi, lw, lb| D2[I-Type Dispatcher]
-    C -->|sw, sb| D3[S-Type Dispatcher]
-    C -->|beq, bne| D4[B-Type Dispatcher]
-    C -->|Otro| ERR[ValueError: Instrucción no soportada]
-
-    D1 --> P1[parse_register]
-    D2 --> P1
-    D2 --> P2[parse_immediate]
-    D3 --> P1
-    D3 --> P2
-    D4 --> P1
-    D4 --> P2
-
-    P1 --> E1[encode_r: desplazamientos y funct7/funct3]
-    P2 --> E2[encode_i: máscara & 0xFFF y shift 20]
-    P2 --> E3[encode_s: división imm 11:5 y 4:0]
-    P2 --> E4[encode_b: scrambled imm 12, 11, 10:5, 4:1]
-
-    E1 --> W[Palabra de 32 bits: word]
-    E2 --> W
-    E3 --> W
-    E4 --> W
-
-    W --> V[explain_instruction: Generador Visual ASCII]
-    W --> H[Salida Terminal: HEX: 0xXXXXXXXX]
-    V --> OUT[Salida Estándar en Consola]
-    H --> OUT
-```
 
 ### 1.2. Decisiones de Diseño Clave
 
@@ -62,9 +28,8 @@ flowchart TD
    - La sintaxis de las 12 instrucciones RV32I del subconjunto se divide en dos estructuras: registros separados por comas (`add rd, rs1, rs2`, `addi rd, rs1, imm`, `beq rs1, rs2, imm`) o accesos a memoria (`lw rd, imm(rs1)`, `sw rs2, imm(rs1)`).
    - Al sustituir comas y paréntesis por espacios antes de invocar `.split()`, la instrucción se divide de forma limpia en una lista ordenada de tokens.
 
-2. **Validación Estricta de Registros (`parse_register`):**
-   - Se valida el prefijo `'x'` y que el índice numérico posterior esté estrictamente en el rango decimal $[0, 31]$.
-   - Al convertir con `int(reg[1:])` usando la base decimal por defecto (base 10), el programa rechaza automáticamente formatos no permitidos para registros en ensamblador como hexadecimales o binarios (ej. `x0b101` o `x0x10`).
+2. **Validación de Registros (`parse_register`):**
+   - Se asegura de que empiece con `'x'` y que el número esté entre `0` y `31` (de `x0` a `x31`). Al usar `int(reg[1:])` convierte solo números en base 10 estándar y descarta cualquier formato no válido.
 
 3. **Flexibilidad en Inmediatos (`parse_immediate`):**
    - Se utiliza `int(imm.strip(), 0)`. El valor `base=0` permite a Python inferir la base numérica, admitiendo valores positivos y negativos en decimal (ej. `100`, `-50`), hexadecimal (ej. `0x1F`) o binario (ej. `0b1010`), tal como lo soportaria un ensamblador estándar.
@@ -90,16 +55,16 @@ A continuación se documentan formalmente las funciones que integran el módulo 
 ### 2.1. Funciones de Parseo y Validación Léxica
 
 #### `parse_register(reg: str) -> int`
-* **Propósito:** Recibe una cadena de texto que representa un registro (por ejemplo, `"x5"` o `"  X14 "`) y retorna su índice numérico entero correspondiente en base 10.
+* **Propósito:** Recibe una cadena de texto que representa un registro (por ejemplo, `"x5"` o `"  X14 "`) y retorna el numero entero correspondiente en base 10.
 * **Parámetros:**
   - `reg` (`str`): Cadena con el nombre del registro.
 * **Retorno:**
   - `int`: Número entero en el rango $[0, 31]$.
 * **Lógica de validación:**
-  1. Aplica `.strip().lower()` para eliminar espacios y normalizar mayúsculas.
-  2. Comprueba que el texto inicie con el carácter `'x'`.
-  3. Extrae la subcadena posterior `reg[1:]` y la convierte usando `int(reg[1:])`. Al no especificar base, Python asume estrictamente base 10 (decimal), rechazando cadenas en binario o hexadecimal (ej. `x0b101` o `x0x10`).
-  4. Verifica que `0 <= reg_num <= 31`. Si está fuera de rango, lanza `ValueError`.
+  1. Aplica `.strip().lower()` para limpiar espacios y dejarlo en minúscula.
+  2. Revisa que empiece con `'x'`.
+  3. Convierte el número después de la 'x' a entero con `int(reg[1:])`.
+  4. Valida que el número de registro esté entre `0` y `31`. Si no cumple, da error.
 
 #### `parse_immediate(imm: str) -> int`
 * **Propósito:** Convierte el string inmediato o desplazamiento en un número entero con signo.
@@ -108,7 +73,7 @@ A continuación se documentan formalmente las funciones que integran el módulo 
 * **Retorno:**
   - `int`: Entero con signo representativo del valor matemático.
 * **Lógica de validación:**
-  - Utiliza `int(imm.strip(), 0)`. El argumento `base=0` habilita a Python para autodeterminar la base numérica según los prefijos estándar (`0x` para hexadecimal, `0b` para binario, o dígitos directos para decimal), aceptando valores negativos.
+  - Utiliza `int(imm.strip(), 0)`. El argumento `base=0` le permite a Python detectar automáticamente si el número viene en decimal, hexadecimal (`0x`) o binario (`0b`), aceptando tanto valores positivos como negativos.
 
 ---
 
@@ -136,7 +101,7 @@ A continuación se documentan formalmente las funciones que integran el módulo 
   $$\text{word} = (\text{imm\_11\_5} \ll 25) \mid (\text{rs2} \ll 20) \mid (\text{rs1} \ll 15) \mid (\text{funct3} \ll 12) \mid (\text{imm\_4\_0} \ll 7) \mid \text{opcode}$$
 
 #### `encode_b(imm: int, rs2: int, rs1: int, funct3: int, opcode: int) -> int`
-* **Propósito:** Ensambla una instrucción de bifurcación condicional Tipo B.
+* **Propósito:** Ensambla una instrucción de salto condicional Tipo B.
 * **Operación de bits:**
   - Recorta el desplazamiento a 13 bits con signo: `imm_13 = imm & 0x1FFF`.
   - Descompone el inmediato en 4 secciones sin almacenar el bit 0:
@@ -149,18 +114,14 @@ A continuación se documentan formalmente las funciones que integran el módulo 
 
 ---
 
-### 2.3. Funciones Principales de Orquestación y Salida
+### 2.3. Funciones Principales
 
 #### `encode_instruction(instruction: str) -> int`
-* **Propósito:** Función punto de entrada del motor de codificación. Recibe la línea en texto de la instrucción ensamblador, orquesta la tokenización, valida el mnemónico y despacha a la rutina de ensamblado adecuada.
-* **Retorno:** Entero de 32 bits correspondiente al código máquina.
+* **Propósito:** Es la función principal del programa. Recibe la instrucción en texto, la limpia y separa en partes, revisa cuál mnemónico es y llama a la función correspondiente (`encode_r`, `encode_i`, `encode_s` o `encode_b`) para armar el código máquina.
+* **Retorno:** El número entero de 32 bits que representa la instrucción en binario/hexadecimal.
 
 #### `explain_instruction(instruction: str, word: int) -> str`
-* **Propósito:** Generador de la salida didáctica visual. A partir de los tokens de la instrucción y de la palabra ensamblada, construye una tabla estructurada en caracteres ASCII que refleja:
-  - Formato identificado (R, I, S o B).
-  - Codificación binaria agrupada por campos y codificación hexadecimal.
-  - Tabla con nombres de campos, rangos de bits, valores binarios y valores decimales/hexadecimales.
-  - Explicación textual contextualizada del rol de cada operando en la operación ejecutada.
+* **Propósito:** Genera el texto con la tabla visual en ASCII. Muestra la instrucción dividida en sus campos con sus respectivos bits, valores en binario/decimal y una explicación sencilla de lo que hace cada parte.
 
 ---
 
