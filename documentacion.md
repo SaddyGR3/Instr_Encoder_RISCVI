@@ -102,7 +102,7 @@ A continuación se documentan formalmente las funciones que integran el módulo 
   4. Verifica que `0 <= reg_num <= 31`. Si está fuera de rango, lanza `ValueError`.
 
 #### `parse_immediate(imm: str) -> int`
-* **Propósito:** Convierte una cadena de texto representativa de un operando inmediato o desplazamiento en un número entero con signo.
+* **Propósito:** Convierte el string inmediato o desplazamiento en un número entero con signo.
 * **Parámetros:**
   - `imm` (`str`): Cadena con el valor numérico (ej. `"100"`, `"-50"`, `"0x1F"`, `"0b1010"`).
 * **Retorno:**
