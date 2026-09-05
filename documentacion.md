@@ -82,14 +82,18 @@ A continuación se documentan formalmente las funciones que integran el módulo 
 #### `encode_r(funct7: int, rs2: int, rs1: int, funct3: int, rd: int, opcode: int) -> int`
 * **Propósito:** Ensambla los campos de una instrucción Tipo R en una palabra de 32 bits.
 * **Operación de bits:**
-  $$\text{word} = (\text{funct7} \ll 25) \mid (\text{rs2} \ll 20) \mid (\text{rs1} \ll 15) \mid (\text{funct3} \ll 12) \mid (\text{rd} \ll 7) \mid \text{opcode}$$
+  ```python
+  word = (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+  ```
 
 #### `encode_i(imm: int, rs1: int, funct3: int, rd: int, opcode: int) -> int`
 * **Propósito:** Ensambla una instrucción Tipo I (aritmética con inmediato o carga de memoria).
 * **Operación de bits:**
   - Aplica la máscara `imm_12 = imm & 0xFFF` para recortar el inmediato a exactamente 12 bits en complemento a dos.
   - Desplaza el inmediato 20 posiciones hacia la izquierda y combina los operandos:
-  $$\text{word} = (\text{imm\_12} \ll 20) \mid (\text{rs1} \ll 15) \mid (\text{funct3} \ll 12) \mid (\text{rd} \ll 7) \mid \text{opcode}$$
+  ```python
+  word = (imm_12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+  ```
 
 #### `encode_s(imm: int, rs2: int, rs1: int, funct3: int, opcode: int) -> int`
 * **Propósito:** Ensambla una instrucción Tipo S de almacenamiento en memoria RAM.
@@ -97,8 +101,10 @@ A continuación se documentan formalmente las funciones que integran el módulo 
   - Recorta a 12 bits: `imm_12 = imm & 0xFFF`.
   - Extrae los 5 bits inferiores: `imm_4_0 = imm_12 & 0x1F`.
   - Extrae los 7 bits superiores: `imm_11_5 = (imm_12 >> 5) & 0x7F`.
-  - Ubica `imm_11_5` en los bits $[31:25]$ e `imm_4_0` en los bits $[11:7]$:
-  $$\text{word} = (\text{imm\_11\_5} \ll 25) \mid (\text{rs2} \ll 20) \mid (\text{rs1} \ll 15) \mid (\text{funct3} \ll 12) \mid (\text{imm\_4\_0} \ll 7) \mid \text{opcode}$$
+  - Ubica `imm_11_5` en los bits [31:25] e `imm_4_0` en los bits [11:7]:
+  ```python
+  word = (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode
+  ```
 
 #### `encode_b(imm: int, rs2: int, rs1: int, funct3: int, opcode: int) -> int`
 * **Propósito:** Ensambla una instrucción de salto condicional Tipo B.
@@ -110,7 +116,12 @@ A continuación se documentan formalmente las funciones que integran el módulo 
     - `imm_10_5 = (imm_13 >> 5) & 0x3F` (bits 10 al 5, 6 bits).
     - `imm_4_1 = (imm_13 >> 1) & 0xF` (bits 4 al 1, 4 bits).
   - Posiciona cada sección en las coordenadas exactas de la arquitectura RV32I:
-  $$\text{word} = (\text{imm\_12} \ll 31) \mid (\text{imm\_10\_5} \ll 25) \mid (\text{rs2} \ll 20) \mid (\text{rs1} \ll 15) \mid (\text{funct3} \ll 12) \mid (\text{imm\_4\_1} \ll 8) \mid (\text{imm\_11} \ll 7) \mid \text{opcode}$$
+  ```python
+  word = (
+      (imm_12 << 31) | (imm_10_5 << 25) | (rs2 << 20) | (rs1 << 15) |
+      (funct3 << 12) | (imm_4_1 << 8) | (imm_11 << 7) | opcode
+  )
+  ```
 
 ---
 
