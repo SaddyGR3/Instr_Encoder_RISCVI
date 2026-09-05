@@ -50,3 +50,23 @@ python3 test_vectores.py
 ```
 
 ---
+
+## 4. Validación Cruzada con Toolchain Oficial de RISC-V (GNU)
+
+Para verificar y contrastar los 36 casos contra el ensamblador y desensamblador oficial de GNU (`as` / `objdump`):
+
+### Instalación del toolchain:
+* **En Arch Linux / CachyOS:**
+  ```bash
+  sudo pacman -S riscv64-elf-binutils
+  ```
+* **En Ubuntu / Debian:**
+  ```bash
+  sudo apt update && sudo apt install binutils-riscv64-unknown-elf
+  ```
+
+### Ejecución de la validación:
+```bash
+./validar_objdump.sh
+```
+El script compila `pruebas_36.s` y genera el desensamblado con `objdump -d` para comparar la codificación binaria de cada instrucción.

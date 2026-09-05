@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Implementación del codificador de instrucciones RISC-V.
+Implementacion del codificador de instrucciones RISC-V.
 CE4301 Arquitectura de Computadores I — Proyecto Individual — 2026-II
 
 El programa recibe una instrucción en lenguaje ensamblador y la codifica en su representación binaria.
@@ -37,7 +37,7 @@ def parse_register(reg: str) -> int:
     if not reg.startswith("x"):
         raise ValueError(f"Registro inválido: {reg}")
     try:
-        reg_num = int(reg[1:])  # 'x7'[1:] toma solo '7'
+        reg_num = int(reg[1:])  # "x7"[1:] toma solo "7"
     except ValueError:
         raise ValueError(f"Registro inválido: {reg}")
     if not (0 <= reg_num <= 31):

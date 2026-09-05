@@ -1,10 +1,11 @@
 # Documentación Técnica:
 # Codificador Educativo de Instrucciones RISC-V (RV32I)
 
-Instituto Tecnológico de Costa Rica (TEC)  
+**Instituto Tecnológico de Costa Rica (TEC)**  
 **Curso:** CE-4301 Arquitectura de Computadores I  
 **Profesor** Jeferson Gonzalez Gomez  
-**Semestre:** 2026-II   
+**Semestre:** 2026-II
+
 **Estudiante** Saddy Guzmán Rojas  
 **Carné** 2023088184 
 
@@ -17,6 +18,8 @@ El codificador fue diseñado utilizando unicamente la biblioteca estandar de pyt
 ### 1.1. Diagrama de Arquitectura y Flujo de Datos
 
 El flujo de procesamiento e interacción de componentes en [`encoder.py`](encoder.py) se modela en el siguiente diagrama de arquitectura:
+
+![Diagrama de Arquitectura y Flujo de Datos](img/Encoder_diagram.png)
 
 ```mermaid
 flowchart TD
@@ -297,8 +300,8 @@ HEX: 0xfa4f08e3
 
 Para verificar el cumplimiento funcional contra herramientas oficiales, se construyó una suite de **36 casos de prueba independientes** (3 escenarios por cada una de las 12 instrucciones: *Positivo*, *Negativo/Especial*, y *Límite/Borde*).
 
-> **Nota sobre saltos en GNU Assembler:**  
-> Al compilar instrucciones de salto tipo B con el ensamblador oficial de GNU (`as` / `gcc`), un operando numérico puro puede ser interpretado como dirección absoluta de memoria. Para indicar explícitamente un desplazamiento relativo al PC, se utiliza la notación de ubicación actual `.` (por ejemplo, `beq x1, x2, .+16` o `bne x7, x8, .-16`).
+
+Nota: Al compilar instrucciones de salto tipo B con el ensamblador oficial de GNU (`as` / `gcc`), un operando numérico puro puede ser interpretado como dirección absoluta de memoria. Para indicar explícitamente un desplazamiento relativo al PC, se utiliza la notación de ubicación actual `.` (por ejemplo, `beq x1, x2, .+16` o `bne x7, x8, .-16`).
 
 A continuación se detalla la comparación entre la salida del codificador y la obtenida mediante `riscv64-unknown-elf-objdump -d`:
 
@@ -386,33 +389,3 @@ Disassembly of section .text:
   88:	fe8398e3          	bne	t2,s0,78 <_start+0x78>
   8c:	800f9063          	bnez	t6,fffff08c <_start+0xfffff08c>
 ```
-
----
-
-## 6. Instalación del Toolchain Oficial de RISC-V
-
-Para realizar la validación manual mediante `as` y `objdump`, se requiere un toolchain de GNU para RISC-V:
-
-* **En CachyOS / Arch Linux:**
-  ```bash
-  sudo pacman -S riscv64-elf-binutils
-  ```
-* **En Ubuntu / Debian:**
-  ```bash
-  sudo apt update && sudo apt install binutils-riscv64-unknown-elf
-  ```
-
-### Procedimiento de compilación y verificación:
-1. Crear un archivo en ensamblador `test.s`:
-   ```assembly
-   .text
-   add x1, x2, x3
-   ```
-2. Ensamblar:
-   ```bash
-   riscv64-elf-as -march=rv32i -mabi=ilp32 test.s -o test.o
-   ```
-3. Desensamblar para ver la codificación de 32 bits:
-   ```bash
-   riscv64-elf-objdump -d test.o
-   ```
