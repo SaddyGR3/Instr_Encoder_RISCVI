@@ -1,31 +1,52 @@
-# Kit del proyecto
+# Codificador Educativo de Instrucciones RISC-V (RV32I)
 
-- `encoder_skeleton.py`: esqueleto en Python con el contrato de entrada/salida
-  ya implementado. Complete `encode_instruction` y `explain_instruction`.
-  Su uso es opcional; puede implementar la herramienta en otro lenguaje o
-  desde cero, siempre que respete el mismo contrato (ver especificación).
-- `run.sh`: punto de entrada fijo y obligatorio (`./run.sh "<instruccion>"`).
-  Tal como se entrega, invoca `encoder_skeleton.py`. Si cambia de lenguaje o
-  de estructura, ajuste este archivo para que siga invocando su solución de
-  la misma forma.
-- `vectores_ejemplo.txt`: instrucciones de ejemplo junto con su codificación
-  correcta, para que pueda comprobar su herramienta desde el primer día.
+Herramienta de codificación y análisis visual de instrucciones del subconjunto RISC-V RV32I 
+para el curso CE4301 Arquitectura de Computadores I (TEC, 2026-II).
 
-## Cómo usar `vectores_ejemplo.txt`
+---
 
-El archivo tiene el formato `instruccion ; 0xHEX`, una por línea (las líneas
-que empiezan con `#` son comentarios). Por ejemplo:
+## 1. Requisitos y Preparación del Entorno
 
+La herramienta está desarrollada en **Python 3** y utiliza únicamente módulos de la biblioteca estándar (`sys`). No requiere la instalación de librerías externas ni dependencias vía `pip`.
+
+### Requisitos mínimos:
+- **Python 3.8** o superior instalado en el sistema.
+- Intérprete accesible mediante el comando `python3`.
+- Shell compatible con Bash para la ejecución de `run.sh`.
+
+---
+
+## 2. Modo de Operación (Punto de Entrada Obligatorio)
+
+El punto de entrada del proyecto es el script ejecutable `run.sh`, el cual recibe **una única instrucción** como argumento entre comillas:
+
+```bash
+./run.sh "<instruccion>"
 ```
-add x7, x20, x6 ; 0x006a03b3
+
+### Ejemplos de uso:
+
+```bash
+./run.sh "add x5, x6, x7"
+./run.sh "addi x10, x1, -12"
+./run.sh "lw x5, 8(x6)"
+./run.sh "sw x8, -4(x2)"
+./run.sh "beq x1, x2, 8"
 ```
 
-Esto significa: al ejecutar `./run.sh "add x7, x20, x6"`, la línea `HEX:`
-de su salida debe ser exactamente `HEX: 0x006a03b3`.
+### Formato de salida:
+El programa imprime:
+1. Una tabla visual en formato ASCII con el desglose de los campos (bits, valores y significado).
+2. La línea estandarizada para verificación automática: `HEX: 0xXXXXXXXX`.
 
-Puede comparar manualmente, o escribir un script propio corto que lea el
-archivo línea por línea, ejecute `./run.sh` con cada instrucción, y compare
-el resultado. Estos vectores son un conjunto de ejemplo para su propia
-comprobación; **no sustituyen** los al menos 3 casos de prueba por
-instrucción (36 en total) que la especificación pide construir y validar
-usted mismo contra el toolchain oficial (`objdump -d`).
+---
+
+## 3. Comprobación y Autoevaluación
+
+Para verificar el funcionamiento de la herramienta contra la suite de 36 instrucciones de prueba provistas en `vectores_ejemplo.txt`:
+
+```bash
+python3 test_vectores.py
+```
+
+---
